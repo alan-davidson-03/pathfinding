@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dijkstra's Dungeon — Interactive AI Pathfinding Game with Dynamic Terrain Costs</title>
+  <meta name="description" content="An interactive 2D dungeon crawler demonstrating Dijkstra's shortest path algorithm with weighted terrain movement costs, step-by-step relaxation visualization, and AI character animation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-title-wrap">
+          <span class="game-icon">⚔️</span>
+          <div>
+            <h1 class="main-title">Dijkstra's Dungeon</h1>
+            <p class="main-subtitle">AI Pathfinding Game with Dynamic Terrain Costs &amp; Edge Relaxation</p>
+          </div>
+        </div>
+
+        <!-- Quick Scenario & Audio Controls -->
+        <div class="header-actions">
+          <div class="preset-group">
+            <label for="presetSelect" class="control-label">Scenario:</label>
+            <select id="presetSelect" class="styled-select">
+              <option value="lava-trap">🔥 The Lava Trap (Cost vs Distance)</option>
+              <option value="cost-tradeoff">⚖️ Cost Tradeoff Challenge</option>
+              <option value="swamp-pass">🪵 The Swamp Passage</option>
+              <option value="labyrinth">🧱 Dungeon Labyrinth</option>
+              <option value="blank">🌱 Blank Canvas</option>
+            </select>
+          </div>
+
+          <div class="preset-group">
+            <label for="gridSizeSelect" class="control-label">Grid Size:</label>
+            <select id="gridSizeSelect" class="styled-select">
+              <option value="10x8">10 × 8 (Compact)</option>
+              <option value="12x8" selected>12 × 8 (Standard)</option>
+              <option value="16x10">16 × 10 (Wide)</option>
+              <option value="20x12">20 × 12 (Large)</option>
+            </select>
+          </div>
+
+          <button id="btnAudioToggle" class="audio-btn active" title="Toggle Sound Effects">🔊 Sound On</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Educational Comparison Banner -->
+    <section class="banner-section">
+      <div id="comparisonBanner" class="comparison-banner">
+        <span>⚔️ Modify terrain and watch Dijkstra compute the lowest movement cost path!</span>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <main class="main-layout">
+
+      <!-- Left Column: Controls & Terrain Palette -->
+      <aside class="sidebar-left">
+
+        <!-- Algorithm Control Bar -->
+        <div class="card control-card">
+          <h2 class="card-title">⚡ Algorithm Controls</h2>
+          <div class="btn-grid">
+            <button id="btnRun" class="btn btn-primary" title="Start animated Dijkstra search">
+              <span class="btn-icon">▶</span> Run Dijkstra
+            </button>
+            <button id="btnPause" class="btn btn-secondary" disabled title="Pause or resume search">
+              <span class="btn-icon">⏸</span> Pause
+            </button>
+            <button id="btnStep" class="btn btn-secondary" title="Execute single exploration step">
+              <span class="btn-icon">⏭</span> Single Step
+            </button>
+            <button id="btnInstant" class="btn btn-accent" title="Solve instantly without delay">
+              <span class="btn-icon">⚡</span> Instant Solve
+            </button>
+          </div>
+
+          <div class="btn-row-sub">
+            <button id="btnReset" class="btn btn-sub" title="Reset path and algorithm state">🔄 Reset Path</button>
+            <button id="btnClearWalls" class="btn btn-sub" title="Remove all wall obstacles">🧱 Clear Walls</button>
+            <button id="btnRandomize" class="btn btn-sub" title="Generate random terrain distribution">🎲 Randomize</button>
+          </div>
+
+          <!-- Speed Slider -->
+          <div class="slider-control">
+            <div class="slider-header">
+              <label for="speedSlider">Animation Speed</label>
+              <span id="speedValue" class="slider-badge">75%</span>
+            </div>
+            <input type="range" id="speedSlider" min="1" max="100" value="75" class="styled-range">
+          </div>
+        </div>
+
+        <!-- Terrain Painter Palette -->
+        <div class="card palette-card">
+          <h2 class="card-title">🎨 Terrain Palette &amp; Costs</h2>
+          <p class="card-hint">Select a terrain or marker, then click or drag across the dungeon grid to paint.</p>
+
+          <div class="palette-grid">
+            <!-- Grass -->
+            <button class="tool-btn active" data-tool="GRASS" title="Cost: 1 | Walkable">
+              <div class="tool-preview grass-preview">🌿</div>
+              <div class="tool-info">
+                <span class="tool-name">Grass Meadow</span>
+                <span class="tool-cost cost-1">Cost: 1</span>
+              </div>
+            </button>
+
+            <!-- Road -->
+            <button class="tool-btn" data-tool="ROAD" title="Cost: 1 | Walkable">
+              <div class="tool-preview road-preview">🪨</div>
+              <div class="tool-info">
+                <span class="tool-name">Stone Road</span>
+                <span class="tool-cost cost-1">Cost: 1</span>
+              </div>
+            </button>
+
+            <!-- Sand -->
+            <button class="tool-btn" data-tool="SAND" title="Cost: 3 | Walkable">
+              <div class="tool-preview sand-preview">🏜️</div>
+              <div class="tool-info">
+                <span class="tool-name">Desert Sand</span>
+                <span class="tool-cost cost-3">Cost: 3</span>
+              </div>
+            </button>
+
+            <!-- Mud -->
+            <button class="tool-btn" data-tool="MUD" title="Cost: 5 | Walkable">
+              <div class="tool-preview mud-preview">🪵</div>
+              <div class="tool-info">
+                <span class="tool-name">Deep Mud</span>
+                <span class="tool-cost cost-5">Cost: 5</span>
+              </div>
+            </button>
+
+            <!-- Lava -->
+            <button class="tool-btn" data-tool="LAVA" title="Cost: 10 | Walkable">
+              <div class="tool-preview lava-preview">🔥</div>
+              <div class="tool-info">
+                <span class="tool-name">Molten Lava</span>
+                <span class="tool-cost cost-10">Cost: 10</span>
+              </div>
+            </button>
+
+            <!-- Wall -->
+            <button class="tool-btn" data-tool="WALL" title="Cost: Infinity | Blocked">
+              <div class="tool-preview wall-preview">🧱</div>
+              <div class="tool-info">
+                <span class="tool-name">Dungeon Wall</span>
+                <span class="tool-cost cost-wall">Blocked</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Markers & Eraser -->
+          <div class="special-tools-grid">
+            <button class="tool-btn special-tool" data-tool="START" title="Click grid to move AI Start point">
+              <span class="special-icon">🧙</span> Move Start (S)
+            </button>
+            <button class="tool-btn special-tool" data-tool="GOAL" title="Click grid to move Treasure Goal">
+              <span class="special-icon">🏆</span> Move Goal (G)
+            </button>
+            <button class="tool-btn special-tool" data-tool="ERASER" title="Restore tiles back to Grass">
+              <span class="special-icon">🧽</span> Eraser
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual Layer Toggles -->
+        <div class="card layer-card">
+          <h2 class="card-title">👁️ Visualization Layers</h2>
+          <div class="toggle-list">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="chkCosts" checked>
+              <span class="checkmark"></span>
+              <span class="toggle-label">Show Movement Costs (<code class="code-pill">+1, +3, +10</code>)</span>
+            </label>
+            <label class="custom-checkbox">
+              <input type="checkbox" id="chkDistances" checked>
+              <span class="checkmark"></span>
+              <span class="toggle-label">Show Distance Table (<code class="code-pill">d[u]</code>)</span>
+            </label>
+            <label class="custom-checkbox">
+              <input type="checkbox" id="chkArrows">
+              <span class="checkmark"></span>
+              <span class="toggle-label">Show Parent Pointer Arrows</span>
+            </label>
+            <label class="custom-checkbox highlight-toggle">
+              <input type="checkbox" id="chkBFS">
+              <span class="checkmark"></span>
+              <span class="toggle-label">Compare with Unweighted BFS (Fewest Tiles)</span>
+            </label>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Center & Right: Stage, HUD, Pseudocode & Live Feed -->
+      <section class="main-stage-col">
+
+        <!-- Interactive Dungeon Canvas Card -->
+        <div class="card stage-card">
+          <div class="stage-header">
+            <div class="stage-title-wrap">
+              <span class="stage-badge">Dungeon Grid</span>
+              <span class="stage-hint">Click &amp; drag to paint terrain. Drag 🧙 or 🏆 to move endpoints.</span>
+            </div>
+            <div class="legend-pills">
+              <span class="legend-item"><span class="legend-dot dot-frontier"></span> Frontier (Min-Heap)</span>
+              <span class="legend-item"><span class="legend-dot dot-visited"></span> Visited (Settled)</span>
+              <span class="legend-item"><span class="legend-dot dot-path"></span> Optimal Path</span>
+            </div>
+          </div>
+
+          <div class="canvas-viewport" id="canvasContainer">
+            <canvas id="dungeonCanvas"></canvas>
+          </div>
+
+          <!-- Live Cell Inspector HUD -->
+          <div id="cellInspector" class="cell-inspector">
+            <span class="inspector-hint">Hover over any tile to inspect graph properties</span>
+          </div>
+        </div>
+
+        <!-- Performance & Analytics Dashboard -->
+        <div class="card stats-card">
+          <h2 class="card-title">📊 Pathfinding Analytics HUD</h2>
+          <div class="stats-hud-grid">
+            <div class="stat-box highlight-cost">
+              <span class="stat-label">Total Path Cost</span>
+              <span id="statCost" class="stat-value">0</span>
+              <span class="stat-sub">Sum of movement weights</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Path Length</span>
+              <span id="statLength" class="stat-value">0</span>
+              <span class="stat-sub">Tiles traversed</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Nodes Explored</span>
+              <span id="statExplored" class="stat-value">0</span>
+              <span class="stat-sub">Settled by Dijkstra</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Min-Heap Frontier</span>
+              <span id="statFrontier" class="stat-value">0</span>
+              <span class="stat-sub">Pending in priority queue</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Execution Time</span>
+              <span id="statTime" class="stat-value">0.00 ms</span>
+              <span class="stat-sub">High-precision timer</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Educational Inspector: Pseudocode + Live Explanation Feed -->
+        <div class="educational-grid">
+
+          <!-- Pseudocode Line Tracker -->
+          <div class="card pseudocode-card">
+            <h2 class="card-title">📖 Dijkstra Pseudocode Tracker</h2>
+            <div class="code-box">
+              <div class="code-line" data-line="1"><span class="line-num">1</span> <span class="kw">dist</span>[start] = 0; <span class="kw">pq</span>.push(start, 0)</div>
+              <div class="code-line" data-line="2"><span class="line-num">2</span> <span class="kw">while</span> not <span class="kw">pq</span>.isEmpty(): <span class="var">u</span> = <span class="kw">pq</span>.pop()</div>
+              <div class="code-line" data-line="3"><span class="line-num">3</span> &nbsp;&nbsp;<span class="kw">for</span> each neighbor <span class="var">v</span> of <span class="var">u</span>:</div>
+              <div class="code-line" data-line="4"><span class="line-num">4</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">alt</span> = <span class="kw">dist</span>[u] + <span class="fn">cost</span>(v)</div>
+              <div class="code-line" data-line="5"><span class="line-num">5</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="var">alt</span> &lt; <span class="kw">dist</span>[v]: <span class="kw">dist</span>[v] = <span class="var">alt</span>; <span class="kw">prev</span>[v] = <span class="var">u</span>; <span class="kw">pq</span>.push(v, alt)</div>
+              <div class="code-line" data-line="6"><span class="line-num">6</span> <span class="kw">return</span> <span class="fn">reconstructPath</span>(goal)</div>
+            </div>
+          </div>
+
+          <!-- Step-by-Step Live Relaxation Activity Feed -->
+          <div class="card activity-card">
+            <h2 class="card-title">🔍 Step-by-Step Relaxation Feed</h2>
+            <div id="activityLog" class="activity-feed">
+              <div class="log-entry">Select a scenario or paint terrain, then press "Run Dijkstra" or "Single Step".</div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>⚔️ <strong>Dijkstra's Dungeon</strong> — Interactive Algorithm Visualizer with Dynamic Terrain Weights &bull; Built with HTML5 Canvas &amp; Vanilla JavaScript</p>
+    </footer>
+
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
